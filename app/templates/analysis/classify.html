@@ -11,7 +11,7 @@
   <div class="cmp-head">{{ ic.i('layers') }}<div><b style="font-size:22px">Change Classification &amp; Visualization</b><small>Classified change areas distinguishing human-made changes from natural and environmental variations.</small></div></div>
   <div class="grid" style="grid-template-columns:1.45fr 1fr;gap:20px">
     <div class="cmp-panel">
-      <div class="viewer"><div class="stage" style="aspect-ratio:1.55"><div class="zoomable" data-zoom>
+      <div class="viewer"><div class="stage" style="aspect-ratio:{{ [[(result.width or 4) / (result.height or 3), 0.7]|max, 2.0]|min }}"><div class="zoomable" data-zoom>
         <img class="layer" src="{{ url_for('main.output', pair_id=pair.id, name='t2.png') }}?v={{ v }}" alt="T2 image">
         <img class="layer" data-cls="human" src="{{ url_for('main.output', pair_id=pair.id, name='layer_human.png') }}?v={{ v }}" alt="Human-made changes">
         <img class="layer" data-cls="natural" src="{{ url_for('main.output', pair_id=pair.id, name='layer_natural.png') }}?v={{ v }}" alt="Natural changes">

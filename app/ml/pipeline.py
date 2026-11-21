@@ -50,20 +50,21 @@ def _insights(m: dict) -> list:
 
 def run_pipeline(t1_path: str, t2_path: str, out_dir: str, *, layout_t1="rgb", layout_t2="rgb",
                  fallback_res_m=10.0, detector_kind="classical", onnx_path=None, max_side=1024,
-                 max_pixels=40_000_000) -> PipelineResult:
+                 max_pixels=40_000_000, sensitivity="medium") -> PipelineResult:
     t0 = time.time()
     os.makedirs(out_dir, exist_ok=True)
     s1 = load_scene(t1_path, layout_t1, max_side=max_side, max_pixels=max_pixels)
     s2 = load_scene(t2_path, layout_t2, max_side=max_side, max_pixels=max_pixels)
     pair = prepare_pair(s1, s2, fallback_res_m=fallback_res_m)
-    detector, det_warnings = build_detector(detector_kind, onnx_path)
+    detector, det_warnings = build_detector(detector_kind, onnx_path, sensitivity)
     try:
         det = detector.detect(pair)
     except Exception as exc:        # a broken optional model must not break the analysis
         from .detectors import ClassicalDetector
         det_warnings.append(f"Detector '{detector.name}' failed ({exc}); used the classical baseline.")
-        det = ClassicalDetector().detect(pair)
+        det = ClassicalDetector(sensitivity=sensitivity).detect(pair)
     att = attribute_changes(pair, det.mask)
+    det_warnings += [n for n in det.notes if n.startswith("very large")]
 
     h, w = pair.shape
     valid_px = int(pair.valid.sum())
@@ -108,6 +109,7 @@ def run_pipeline(t1_path: str, t2_path: str, out_dir: str, *, layout_t1="rgb", l
         "natural_pct": round(100.0 * cls_px[NATURAL] / cls_tot, 1) if changed_px else 0.0,
         "env_pct": round(100.0 * cls_px[ENV] / cls_tot, 1) if changed_px else 0.0,
         "registration": pair.info.get("registration"),
+        "sensitivity": sensitivity,
         "runtime_s": round(time.time() - t0, 2),
     }
     warnings = list(pair.warnings) + det_warnings + list(att.notes)

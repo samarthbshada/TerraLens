@@ -58,53 +58,61 @@ class ChangeDetector(ABC):
         ...
 
 
-class ClassicalDetector(ChangeDetector):
-    name = "Classical baseline (CVA + structure)"
+SENSITIVITY_K = {"low": 6.0, "medium": 4.5, "high": 3.0}
 
-    def __init__(self, abs_floor: float = 0.06, noise_k: float = 6.0):
+
+def _tolerant_difference(t1: np.ndarray, t2: np.ndarray, radius: int = 2) -> np.ndarray:
+    """Spectral difference that forgives small misregistration / sharpness differences:
+    for each T2 pixel take the smallest difference to any T1 pixel within +-radius pixels."""
+    h, w = t1.shape[:2]
+    pad = np.pad(t1, ((radius, radius), (radius, radius), (0, 0)), mode="edge")
+    best = None
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            shifted = pad[radius + dy:radius + dy + h, radius + dx:radius + dx + w]
+            d = np.sqrt(np.mean((t2 - shifted) ** 2, axis=2))
+            best = d if best is None else np.minimum(best, d)
+    return best.astype(np.float32)
+
+
+class ClassicalDetector(ChangeDetector):
+    name = "Classical baseline (tolerant CVA)"
+
+    def __init__(self, abs_floor: float = 0.06, sensitivity: str = "medium", max_fraction: float = 0.35):
         self.abs_floor = abs_floor
-        self.noise_k = noise_k
+        self.sensitivity = sensitivity if sensitivity in SENSITIVITY_K else "medium"
+        self.k = SENSITIVITY_K[self.sensitivity]
+        self.max_fraction = max_fraction
 
     def detect(self, pair: PreparedPair) -> DetectionOutput:
-        t1, t2 = pair.t1, pair.t2
         h, w = pair.shape
-        # 1) spectral change-vector magnitude (reflectance units)
-        spec = np.sqrt(np.mean((t2 - t1) ** 2, axis=2)).astype(np.float32)
-        spec = cv2.GaussianBlur(spec, (0, 0), 1.2)
-
-        # 2) structural change: difference of local edge energy
-        def edge_energy(g):
-            gx = cv2.Sobel(g, cv2.CV_32F, 1, 0, ksize=3)
-            gy = cv2.Sobel(g, cv2.CV_32F, 0, 1, ksize=3)
-            return cv2.GaussianBlur(np.sqrt(gx * gx + gy * gy), (0, 0), 2.0)
-        struct = np.abs(edge_energy(pair.gray("t2")) - edge_energy(pair.gray("t1")))
-        struct = struct / (np.percentile(struct, 99) + 1e-6) * 0.5      # comparable scale
-
-        mag = (spec + 0.35 * struct).astype(np.float32)
+        # blur first so differences in sharpness / resolution between the two images matter less
+        b1 = np.dstack([cv2.GaussianBlur(pair.t1[:, :, c], (0, 0), 1.2) for c in range(pair.t1.shape[2])])
+        b2 = np.dstack([cv2.GaussianBlur(pair.t2[:, :, c], (0, 0), 1.2) for c in range(pair.t2.shape[2])])
+        mag = _tolerant_difference(b1, b2, radius=2)
+        mag = cv2.GaussianBlur(mag, (0, 0), 1.5)
         mag[~pair.valid] = 0.0
 
-        # 3) adaptive threshold: Otsu on the magnitude, but never below a noise floor
+        # noise level estimated from the LOWER half of the distribution only, so that a long tail of
+        # genuine change (or edge differences) does not inflate the threshold.
         vals = mag[pair.valid]
-        med = float(np.median(vals))
-        mad = float(np.median(np.abs(vals - med)) * 1.4826)
-        noise_thr = med + self.noise_k * mad
-        u8 = np.clip(mag / (np.percentile(vals, 99.5) + 1e-6) * 255, 0, 255).astype(np.uint8)
-        otsu_val, _ = cv2.threshold(u8[pair.valid].reshape(-1, 1), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        otsu_thr = float(otsu_val) / 255.0 * (np.percentile(vals, 99.5) + 1e-6)
-        thr = max(noise_thr, self.abs_floor, 0.35 * otsu_thr)
+        p10, p50 = np.percentile(vals, (10, 50))
+        sigma_low = max(float(p50 - p10) / 1.28, 1e-4)
+        thr = max(self.abs_floor, float(p50) + self.k * sigma_low)
+        notes = [f"sensitivity={self.sensitivity}", f"threshold={thr:.3f}"]
 
-        # hysteresis: keep weak pixels only when connected to strong ones
-        strong = (mag > thr * 1.25).astype(np.uint8)
+        if (vals > thr).mean() > self.max_fraction:           # e.g. whole scene differs (season / sensor)
+            thr = float(np.percentile(vals, 100 * (1 - self.max_fraction)))
+            notes.append("very large difference between the images - threshold raised; "
+                         "results may reflect seasonal or sensor differences")
+        strong = (mag > thr * 1.2).astype(np.uint8)
         weak = (mag > thr).astype(np.uint8)
         n, lab = cv2.connectedComponents(weak, connectivity=8)
         has_strong = np.zeros(n, bool)
         has_strong[np.unique(lab[strong > 0])] = True
         has_strong[0] = False
         mask = has_strong[lab].astype(np.uint8)
-
-        min_area = max(24, int(h * w * 0.0002))
-        mask = _clean_mask(mask, min_area)
-        notes = [f"threshold={thr:.3f}"]
+        mask = _clean_mask(mask, max(24, int(h * w * 0.0002)))
         return DetectionOutput(mask=mask, magnitude=mag, detector=self.name, notes=notes)
 
 
@@ -159,7 +167,7 @@ class OnnxDetector(ChangeDetector):
         return DetectionOutput(mask=mask, magnitude=prob, detector=self.name)
 
 
-def build_detector(kind: str = "classical", onnx_path: str | None = None):
+def build_detector(kind: str = "classical", onnx_path: str | None = None, sensitivity: str = "medium"):
     """Return (detector, warnings). Falls back to classical on any problem."""
     warnings = []
     if kind == "onnx":
@@ -169,4 +177,4 @@ def build_detector(kind: str = "classical", onnx_path: str | None = None):
             return OnnxDetector(onnx_path), warnings
         except Exception as exc:   # optional feature: never take the app down
             warnings.append(f"Deep model unavailable ({exc}); used the classical baseline instead.")
-    return ClassicalDetector(), warnings
+    return ClassicalDetector(sensitivity=sensitivity), warnings

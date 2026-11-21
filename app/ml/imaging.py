@@ -137,8 +137,8 @@ def _read_array(path: str) -> np.ndarray:
             arr = np.transpose(arr, (1, 2, 0))
         return arr
     with Image.open(path) as im:
-        if im.mode in ("P", "LA", "PA", "CMYK"):
-            im = im.convert("RGBA" if "A" in im.mode else "RGB")
+        if im.mode not in ("RGB", "L", "I;16", "I", "F"):
+            im = im.convert("RGB")           # drops alpha / palette / CMYK so alpha is never read as a band
         arr = np.asarray(im)
     if arr.ndim == 2:
         arr = arr[:, :, None]

@@ -46,6 +46,10 @@ Run the tests: `python -m unittest discover -s tests -v`
   built-up structure change (construction / demolition / roads), vegetation gain-loss (natural) and
   water-extent / seasonal change (environmental); regions are smoothed by majority vote and given a confidence.
   Low-confidence regions are flagged, never silently called human-made.
+* It is **not** a trained BIT / ChangeFormer network. No pretrained weights or training data ship with this
+  project, so no deep model could honestly be claimed. Results support, but do not prove, the cause of a change.
+  On the included synthetic scenes the tests show ~89-97 % correct class on detected human-made pixels - synthetic
+  data is far easier than the real world, so validate on your own labelled study areas before reporting accuracy.
 
 ### Plugging in BIT / ChangeFormer (optional)
 Train or download a model, export it to **ONNX** with:

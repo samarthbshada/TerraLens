@@ -206,6 +206,35 @@ class AppTest(unittest.TestCase):
         r = self.post(c, "/auth/login", {"login": "jane", "password": "newpassword1"}, follow_redirects=True)
         self.assertIn(b"Total Analyses", r.data)
 
+    def test_old_database_without_sensitivity_column_is_upgraded(self):
+        import sqlite3
+        from app import create_app
+        path = os.path.join(self.tmp, "old.db")
+        con = sqlite3.connect(path)
+        con.executescript("""CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(80) NOT NULL UNIQUE,
+            email VARCHAR(120) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, full_name VARCHAR(120), role VARCHAR(20),
+            created_at VARCHAR(19), last_login VARCHAR(19));
+            CREATE TABLE image_pairs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT NOT NULL, dataset_id INT, name VARCHAR(160) NOT NULL,
+            study_area VARCHAR(160), description TEXT, t1_image_id INT NOT NULL, t2_image_id INT NOT NULL, status VARCHAR(20) DEFAULT 'uploaded',
+            created_at VARCHAR(19), updated_at VARCHAR(19));""")
+        con.commit(); con.close()
+        create_app({"TESTING": True, "SECRET_KEY": "t", "DATABASE_URL": "sqlite:///" + path,
+                    "UPLOAD_FOLDER": os.path.join(self.tmp, "up2"), "OUTPUT_FOLDER": os.path.join(self.tmp, "out2")})
+        cols = [r[1] for r in sqlite3.connect(path).execute("PRAGMA table_info(image_pairs)")]
+        self.assertIn("sensitivity", cols)
+
+    def test_sensitivity_is_saved_and_no_change_message_shown(self):
+        c = self.client(); self.register(c, "kate", "kate@example.com")
+        r = self.upload(c, "png")
+        pid = int(re.search(r"/analysis/(\d+)/compare", r.location).group(1))
+        self.assertIn("High sensitivity", c.get(r.location).get_data(as_text=True))
+        self.post(c, f"/analysis/{pid}/detect", {"sensitivity": "high"}, page=r.location)
+        from app.repository import AnalysisRepository
+        with self.app.app_context():
+            from app.db import get_conn
+            self.assertEqual(AnalysisRepository(get_conn()).pair(pid, 1 if False else AnalysisRepository(get_conn()).db.one("SELECT user_id FROM image_pairs WHERE id=?", (pid,))["user_id"])["sensitivity"], "high")
+            self.assertEqual(AnalysisRepository(get_conn()).result(pid)["detector"].split(" ")[0], "Classical")
+
     def test_404_page(self):
         r = self.client().get("/nope"); self.assertEqual(r.status_code, 404)
 

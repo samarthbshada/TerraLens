@@ -110,6 +110,12 @@ def detect(pair_id):
     pair = _get_pair_or_404(pair_id)
     repo = AnalysisRepository(get_conn())
     if request.method == "POST":
+        sens = (request.form.get("sensitivity") or pair.get("sensitivity") or "medium").lower()
+        if sens not in ("low", "medium", "high"):
+            sens = "medium"
+        if sens != pair.get("sensitivity"):
+            repo.set_sensitivity(pair_id, sens)
+            pair["sensitivity"] = sens
         try:
             res = services.run_analysis(pair)
         except (SceneError, ValueError) as exc:

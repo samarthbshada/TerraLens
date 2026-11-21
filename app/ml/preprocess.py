@@ -150,7 +150,8 @@ def prepare_pair(s1: Scene, s2: Scene, fallback_res_m: float = 10.0) -> Prepared
     b = np.dstack([s2.bands[n] for n in names]).astype(np.float32)
     h, w = a.shape[:2]
     if b.shape[:2] != (h, w):
-        warnings.append(f"Image sizes differ ({w}x{h} vs {b.shape[1]}x{b.shape[0]}); T2 was resampled to T1's grid.")
+        warnings.append(f"Note: the images differ slightly in size ({w}x{h} vs {b.shape[1]}x{b.shape[0]} px), so T2 was "
+                        "resampled to match T1. This is normal for crops of the same area.")
         b = np.dstack([cv2.resize(b[:, :, c], (w, h), interpolation=cv2.INTER_AREA if b.shape[0] > h else cv2.INTER_LINEAR)
                        for c in range(b.shape[2])])
 

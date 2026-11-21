@@ -118,7 +118,8 @@ class Database:
             f"""CREATE TABLE IF NOT EXISTS image_pairs (
                 id {pk}, user_id INT NOT NULL, dataset_id INT, name VARCHAR(160) NOT NULL,
                 study_area VARCHAR(160), description TEXT, t1_image_id INT NOT NULL, t2_image_id INT NOT NULL,
-                status VARCHAR(20) DEFAULT 'uploaded', created_at VARCHAR(19), updated_at VARCHAR(19),
+                status VARCHAR(20) DEFAULT 'uploaded', sensitivity VARCHAR(10) DEFAULT 'medium',
+                created_at VARCHAR(19), updated_at VARCHAR(19),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (t1_image_id) REFERENCES satellite_images(id),
                 FOREIGN KEY (t2_image_id) REFERENCES satellite_images(id)){tail}""",
@@ -143,9 +144,20 @@ class Database:
         try:
             for stmt in ddl:
                 conn.execute(stmt).close()
+            self._migrate(conn)
             conn.commit()
         finally:
             conn.close()
+
+    def _migrate(self, conn):
+        """Add columns introduced after the first release (keeps existing databases working)."""
+        if self.dialect == "sqlite":
+            cols = [r["name"] for r in conn.query("PRAGMA table_info(image_pairs)")]
+            missing = "sensitivity" not in cols
+        else:
+            missing = not conn.query("SHOW COLUMNS FROM image_pairs LIKE 'sensitivity'")
+        if missing:
+            conn.execute("ALTER TABLE image_pairs ADD COLUMN sensitivity VARCHAR(10) DEFAULT 'medium'").close()
 
 
 def get_conn() -> Conn:

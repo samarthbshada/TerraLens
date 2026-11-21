@@ -7,13 +7,16 @@
 <p class="page-sub">Upload multi-temporal satellite images to detect and analyse changes</p>
 {% include 'includes/stepper.html' %}
 
-{% for w in result.warnings %}<div class="alert warn">{{ ic.i('alert') }}<div>{{ w }}</div></div>{% endfor %}
+{% if result.changed_pixels == 0 %}
+<div class="alert info">{{ ic.i('info') }}<div><b>No change was found at this sensitivity.</b> Try <b>High sensitivity</b> and press Re-run. If it stays empty, check that both images show the same area, were taken on different dates, and use the same band order.</div></div>
+{% endif %}
+{% for w in result.warnings %}<div class="alert {{ 'info' if w.startswith('Note:') else 'warn' }}">{{ ic.i('alert') }}<div>{{ w }}</div></div>{% endfor %}
 <div class="card">
   <div class="cmp-head">{{ ic.i('layers') }}<div><b style="font-size:22px">Change Detection Results</b><small>Regions of change identified between T1 and T2 using the {{ result.detector }}.</small></div></div>
   <div class="cmp-grid" style="grid-template-columns:1.1fr 1fr">
     <div class="cmp-panel">
       <b style="font-size:18px;display:block;margin-bottom:10px">Detected Changes (Overlay)</b>
-      <div class="viewer"><div class="stage"><div class="zoomable" data-zoom id="det-stack">
+      <div class="viewer"><div class="stage" style="aspect-ratio:{{ [[(result.width or 4) / (result.height or 3), 0.7]|max, 2.0]|min }}"><div class="zoomable" data-zoom id="det-stack">
         <img class="layer" data-layer="t1" src="{{ url_for('main.output', pair_id=pair.id, name='t1.png') }}?v={{ v }}" style="display:none" alt="T1">
         <img class="layer" data-layer="t2" src="{{ url_for('main.output', pair_id=pair.id, name='t2.png') }}?v={{ v }}" style="display:none" alt="T2">
         <img class="layer" data-layer="overlay" src="{{ url_for('main.output', pair_id=pair.id, name='overlay.png') }}?v={{ v }}" alt="Detected changes overlay">
@@ -32,7 +35,7 @@
     </div>
     <div class="cmp-panel">
       <b style="font-size:18px;display:block;margin-bottom:10px">Change Map (Binary)</b>
-      <div class="viewer"><div class="stage"><div class="zoomable" data-zoom><img src="{{ url_for('main.output', pair_id=pair.id, name='changemap.png') }}?v={{ v }}" alt="Binary change map"></div></div></div>
+      <div class="viewer"><div class="stage" style="aspect-ratio:{{ [[(result.width or 4) / (result.height or 3), 0.7]|max, 2.0]|min }}"><div class="zoomable" data-zoom><img src="{{ url_for('main.output', pair_id=pair.id, name='changemap.png') }}?v={{ v }}" alt="Binary change map"></div></div></div>
       <div class="vtools" style="justify-content:flex-end">
         <button class="sqbtn" type="button" data-act="zoom-in">{{ ic.i('zoom-in') }}</button>
         <button class="sqbtn" type="button" data-act="zoom-out">{{ ic.i('zoom-out') }}</button>
@@ -50,7 +53,9 @@
     <a class="btn" href="{{ url_for('analysis.compare', pair_id=pair.id) }}">{{ ic.i('arrow-left') }}Back to Compare</a>
     <div class="right">
       <form method="post" action="{{ url_for('analysis.detect', pair_id=pair.id) }}" data-loading="Re-running detection...">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">{{ ic.i('refresh') }}Re-run</button></form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <span style="display:inline-flex;gap:10px;align-items:center"><select name="sensitivity" style="width:auto;min-height:44px;padding:8px 36px 8px 12px" aria-label="Sensitivity" title="How easily a difference counts as change">
+          {% for k, label in (('low','Low sensitivity'),('medium','Medium sensitivity'),('high','High sensitivity')) %}<option value="{{ k }}" {{ 'selected' if (pair.sensitivity or 'medium') == k }}>{{ label }}</option>{% endfor %}</select><button class="btn" type="submit">{{ ic.i('refresh') }}Re-run</button></span></form>
       <a class="btn primary" href="{{ url_for('analysis.classify', pair_id=pair.id) }}">Proceed to Classify &amp; Analyse {{ ic.i('arrow-right') }}</a>
     </div>
   </div>

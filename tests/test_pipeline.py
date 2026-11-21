@@ -58,6 +58,40 @@ class PipelineTest(unittest.TestCase):
         det_sh, _ = analyse(t1, shifted, True)
         self.assertLess(abs(det_sh.mask.mean() - det_ok.mask.mean()), 0.02)
 
+    def test_blurred_misaligned_recoloured_pair_still_detects(self):
+        """Regression: real pairs differ in sharpness, colour and tiny misalignment everywhere.
+        The old detector's noise estimate exploded and it reported zero change."""
+        t1, t2, truth = make_pair(512, 7, True)
+        t2 = cv2.GaussianBlur(t2, (0, 0), 1.3)
+        t2 = cv2.warpAffine(t2, np.float32([[1, 0, 1.4], [0, 1, -1.1]]), (512, 512), borderMode=cv2.BORDER_REFLECT)
+        t2 = np.clip(t2 * np.array([1.12, 1.08, 1.15, 1.0], np.float32) + 0.03, 0, 1)
+        det, _ = analyse(t1, t2, True)
+        gt = truth > 0
+        inter = (det.mask > 0) & gt
+        self.assertGreater(det.mask.sum(), 0, "must not report 'no change'")
+        self.assertGreater(inter.sum() / gt.sum(), 0.6, "recall")
+        self.assertLess(det.mask.mean(), 0.30, "must not flag most of the scene")
+
+    def test_sensitivity_orders_results(self):
+        t1, t2, _ = make_pair(512, 7, True)
+        names = ("red", "green", "blue", "nir")
+        pair = PreparedPair(t1, t2, names, 10.0, np.ones((512, 512), bool), {})
+        frac = {k: ClassicalDetector(sensitivity=k).detect(pair).mask.mean() for k in ("low", "medium", "high")}
+        self.assertLessEqual(frac["low"], frac["medium"]); self.assertLessEqual(frac["medium"], frac["high"])
+
+    def test_png_alpha_is_never_read_as_a_band(self):
+        from PIL import Image
+        from app.ml.imaging import load_scene
+        d = tempfile.mkdtemp()
+        try:
+            rgba = np.dstack([(np.random.rand(64, 64, 3) * 255).astype(np.uint8), np.full((64, 64), 255, np.uint8)])
+            Image.fromarray(rgba, "RGBA").save(d + "/a.png")
+            scene = load_scene(d + "/a.png", "rgbn")          # asks for NIR; alpha must not be used as NIR
+            self.assertFalse(scene.has_nir)
+            self.assertTrue(any("3 bands" in w for w in scene.warnings))
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
     def test_files_pipeline_outputs_and_metrics(self):
         d = tempfile.mkdtemp()
         try:

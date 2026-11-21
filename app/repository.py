@@ -96,7 +96,7 @@ class AnalysisRepository:
         SELECT p.*, d.source AS source,
                a.original_filename AS t1_name, a.file_path AS t1_path, a.preview_name AS t1_preview,
                a.acquisition_date AS t1_date, a.band_layout AS t1_layout, a.file_size AS t1_size,
-               a.ground_res_m AS ground_res_m,
+               a.ground_res_m AS ground_res_m, a.width AS t1_w, a.height AS t1_h,
                b.original_filename AS t2_name, b.file_path AS t2_path, b.preview_name AS t2_preview,
                b.acquisition_date AS t2_date, b.band_layout AS t2_layout, b.file_size AS t2_size
         FROM image_pairs p
@@ -127,6 +127,10 @@ class AnalysisRepository:
 
     def set_status(self, pair_id, status):
         self.db.update("image_pairs", pair_id, status=status, updated_at=now_str())
+        self.db.commit()
+
+    def set_sensitivity(self, pair_id, sensitivity):
+        self.db.update("image_pairs", pair_id, sensitivity=sensitivity, updated_at=now_str())
         self.db.commit()
 
     def delete_pair(self, pair_id, user_id):

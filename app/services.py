@@ -93,7 +93,8 @@ def run_analysis(pair_row: dict):
         layout_t1=pair_row["t1_layout"] or "rgb", layout_t2=pair_row["t2_layout"] or "rgb",
         fallback_res_m=float(pair_row.get("ground_res_m") or 10.0),
         detector_kind=cfg["CD_DETECTOR"], onnx_path=cfg.get("CD_ONNX_MODEL"),
-        max_side=cfg["ANALYSIS_MAX_SIDE"], max_pixels=cfg["MAX_IMAGE_PIXELS"])
+        max_side=cfg["ANALYSIS_MAX_SIDE"], max_pixels=cfg["MAX_IMAGE_PIXELS"],
+        sensitivity=pair_row.get("sensitivity") or "medium")
 
 
 def results_zip(pair_row: dict, result: dict) -> bytes:

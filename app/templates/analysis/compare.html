@@ -13,12 +13,12 @@
       {% for tag, d, name, iid in (('T1', pair.t1_date, pair.t1_name, pair.t1_image_id), ('T2', pair.t2_date, pair.t2_name, pair.t2_image_id)) %}
       <div class="cmp-panel">
         <div class="cmp-head" style="margin-bottom:10px">{{ ic.i('calendar') }}<div><b>{{ tag }}{% if d %} - {{ d|date }}{% endif %}</b><small>{{ pair.source }} ({{ pair.name }}) &middot; {{ name }}</small></div></div>
-        <div class="viewer"><div class="stage"><div class="zoomable" data-zoom><img src="{{ url_for('main.preview', image_id=iid) }}" alt="{{ tag }} image"></div></div></div>
+        <div class="viewer"><div class="stage" style="aspect-ratio:{{ [[(pair.t1_w or 4) / (pair.t1_h or 3), 0.7]|max, 2.0]|min }}"><div class="zoomable" data-zoom><img src="{{ url_for('main.preview', image_id=iid) }}" alt="{{ tag }} image"></div></div></div>
       </div>
       {% endfor %}
     </div>
     <div class="cmp-single">
-      <div class="viewer"><div class="stage"><div class="zoomable" data-zoom>
+      <div class="viewer"><div class="stage" style="aspect-ratio:{{ [[(pair.t1_w or 4) / (pair.t1_h or 3), 0.7]|max, 2.0]|min }}"><div class="zoomable" data-zoom>
         <img src="{{ url_for('main.preview', image_id=pair.t1_image_id) }}" alt="T1">
         <img class="top" id="cmp-top" src="{{ url_for('main.preview', image_id=pair.t2_image_id) }}" alt="T2" style="opacity:.5">
       </div></div></div>
@@ -40,7 +40,9 @@
     <a class="btn" href="{{ url_for('analysis.new') }}">{{ ic.i('arrow-left') }}Back to Upload</a>
     <form method="post" action="{{ url_for('analysis.detect', pair_id=pair.id) }}" data-loading="Registering images and detecting changes...">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn primary" type="submit">Proceed to Detect Changes {{ ic.i('arrow-right') }}</button>
+      <span style="display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap"><select name="sensitivity" style="width:auto;min-height:44px;padding:8px 36px 8px 12px" aria-label="Sensitivity" title="How easily a difference counts as change">
+          {% for k, label in (('low','Low sensitivity'),('medium','Medium sensitivity'),('high','High sensitivity')) %}<option value="{{ k }}" {{ 'selected' if (pair.sensitivity or 'medium') == k }}>{{ label }}</option>{% endfor %}</select>
+      <button class="btn primary" type="submit">Proceed to Detect Changes {{ ic.i('arrow-right') }}</button></span>
     </form>
   </div>
 </div>
