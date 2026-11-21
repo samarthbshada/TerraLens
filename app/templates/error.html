@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="empty" style="margin-top:60px">
+  {{ ic.i('alert') }}
+  <h1 class="page-title">{{ code }}</h1>
+  <p class="page-sub" style="margin-bottom:6px">{{ title }}</p>
+  <p>{{ message }}</p>
+  <p style="margin-top:22px"><a class="btn primary" href="{{ url_for('main.index') }}">Back to dashboard</a></p>
+</div>
+{% endblock %}
+{% block auth %}
+<div class="auth-wrap"><div class="auth-card"><div class="card empty">
+  {{ ic.i('alert') }}<h2>{{ code }} - {{ title }}</h2><p>{{ message }}</p>
+  <p><a class="btn primary" href="{{ url_for('main.index') }}">Continue</a></p>
+</div></div></div>
+{% endblock %}

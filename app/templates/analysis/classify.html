@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Classify & Analyse{% endblock %}
+{% block content %}
+{% set v = result.created_at|replace(' ','')|replace(':','') %}
+<h1 class="page-title">New Analysis</h1>
+<p class="page-sub">Upload multi-temporal satellite images to detect and analyse changes</p>
+{% include 'includes/stepper.html' %}
+
+<div class="card">
+  <div class="cmp-head">{{ ic.i('layers') }}<div><b style="font-size:22px">Change Classification &amp; Visualization</b><small>Classified change areas distinguishing human-made changes from natural and environmental variations.</small></div></div>
+  <div class="grid" style="grid-template-columns:1.45fr 1fr;gap:20px">
+    <div class="cmp-panel">
+      <div class="viewer"><div class="stage" style="aspect-ratio:1.55"><div class="zoomable" data-zoom>
+        <img class="layer" src="{{ url_for('main.output', pair_id=pair.id, name='t2.png') }}?v={{ v }}" alt="T2 image">
+        <img class="layer" data-cls="human" src="{{ url_for('main.output', pair_id=pair.id, name='layer_human.png') }}?v={{ v }}" alt="Human-made changes">
+        <img class="layer" data-cls="natural" src="{{ url_for('main.output', pair_id=pair.id, name='layer_natural.png') }}?v={{ v }}" alt="Natural changes">
+        <img class="layer" data-cls="env" src="{{ url_for('main.output', pair_id=pair.id, name='layer_env.png') }}?v={{ v }}" alt="Environmental changes">
+      </div></div></div>
+      <div class="vtools">
+        <button class="sqbtn" type="button" data-act="zoom-in">{{ ic.i('zoom-in') }}</button>
+        <button class="sqbtn" type="button" data-act="zoom-out">{{ ic.i('zoom-out') }}</button>
+        <button class="sqbtn" type="button" data-act="full">{{ ic.i('maximize') }}</button>
+        <div class="checks" id="cls-checks" style="margin-left:auto">
+          <label class="check" style="--c:#ef4444"><input type="checkbox" data-cls-toggle="human" checked> Human-made</label>
+          <label class="check" style="--c:#22c55e"><input type="checkbox" data-cls-toggle="natural" checked> Natural</label>
+          <label class="check" style="--c:#eab308"><input type="checkbox" data-cls-toggle="env" checked> Environmental</label>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="card inner">
+        <div class="card-title" style="font-size:18px">{{ ic.i('pie') }}<span>Change Classification (Area-wise)</span></div>
+        <div style="display:flex;gap:24px;align-items:center;margin-top:16px;flex-wrap:wrap">
+          <div class="donut" style="background:{{ donut }}"><div class="center"><b>{{ '%.2f'|format(result.total_change_area_km2) }}</b><b style="font-size:19px">km&sup2;</b><small>(Total Change)</small></div></div>
+          <div class="legend">
+            <div class="item"><span class="sw" style="background:#ef4444"></span><div><b>Human-made Changes</b><small>{{ '%.2f'|format(result.human_km2) }} km&sup2; ({{ result.human_pct }}%)</small></div></div>
+            <div class="item"><span class="sw" style="background:#22c55e"></span><div><b>Natural Changes</b><small>{{ '%.2f'|format(result.natural_km2) }} km&sup2; ({{ result.natural_pct }}%)</small></div></div>
+            <div class="item"><span class="sw" style="background:#eab308"></span><div><b>Environmental Changes</b><small>{{ '%.2f'|format(result.env_km2) }} km&sup2; ({{ result.env_pct }}%)</small></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card inner">
+        <div class="card-title" style="font-size:18px">{{ ic.i('bar') }}<span>Change Insights</span></div>
+        <ul class="insights">{% for line in result.insights %}<li>{{ line }}</li>{% endfor %}</ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <a class="btn" href="{{ url_for('analysis.detect', pair_id=pair.id) }}">{{ ic.i('arrow-left') }}Back to Detect Changes</a>
+    <div class="right">
+      <a class="btn" href="{{ url_for('analysis.download', pair_id=pair.id) }}">{{ ic.i('download') }}Download Results</a>
+      <form method="post" action="{{ url_for('analysis.save', pair_id=pair.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn primary" type="submit">{{ ic.i('save') }}Save Analysis</button></form>
+    </div>
+  </div>
+</div>
+
+{% if result.regions %}
+<div class="card" style="margin-top:20px">
+  <div class="card-title">{{ ic.i('pin') }}<span>Detected Regions</span></div>
+  <p class="card-sub" style="margin-bottom:10px">Largest regions first. Low confidence means the evidence was mixed &mdash; review these by eye.</p>
+  <div style="overflow-x:auto"><table class="t">
+    <tr><th>#</th><th>Class</th><th>Area (km&sup2;)</th><th>Confidence</th><th>Why</th></tr>
+    {% for r in result.regions[:15] %}
+    <tr><td>{{ r.id }}</td>
+      <td><span class="pill {{ {'Human-made':'red','Natural':'ok','Environmental':'warn'}[r['class']] }}">{{ r['class'] }}</span></td>
+      <td>{{ '%.3f'|format(r.area_km2) }}</td>
+      <td>{{ (r.confidence*100)|round|int }}% {% if r.confidence < 0.45 %}<span class="pill mute">low</span>{% endif %}</td>
+      <td>{{ r.reason }}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+{% endif %}
+<p class="notice">Detector: {{ result.detector }}. Human / natural attribution is a rule-based spectral and structural interpretation of the two images &mdash; it supports, but does not prove, the cause of a change. Area values assume {{ result.pixel_size_m }} m per analysis pixel.</p>
+{% for w in result.warnings %}<p class="notice">&bull; {{ w }}</p>{% endfor %}
+{% endblock %}

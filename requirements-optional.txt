@@ -1,0 +1,3 @@
+# Only needed if you plug in a trained BIT / ChangeFormer model exported to ONNX
+# (set CD_DETECTOR=onnx and CD_ONNX_MODEL=/path/to/model.onnx)
+onnxruntime>=1.17

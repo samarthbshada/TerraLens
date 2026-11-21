@@ -1,0 +1,8 @@
+{% import 'includes/icons.html' as ic %}
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in msgs %}
+    <div class="alert {{ cat if cat in ('error','success','info','warn') else 'info' }}">
+      {{ ic.i('alert' if cat == 'error' else 'info') }}<div>{{ msg }}</div>
+    </div>
+  {% endfor %}
+{% endwith %}

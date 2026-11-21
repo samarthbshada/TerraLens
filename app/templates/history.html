@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Analysis History{% endblock %}
+{% block content %}
+<h1 class="page-title">Analysis History</h1>
+<p class="page-sub">Every analysis you have run</p>
+<div class="toolbar">
+  <form method="get" style="display:flex;gap:10px;max-width:420px;width:100%">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search by name or study area">
+    <button class="btn" type="submit">{{ ic.i('search') }}</button>
+  </form>
+  <a class="btn primary" href="{{ url_for('analysis.new') }}">{{ ic.i('satellite') }}New Analysis</a>
+</div>
+{% if pairs %}
+<div class="card" style="padding:8px 14px"><div style="overflow-x:auto"><table class="t">
+  <tr><th>Analysis</th><th>Source</th><th>T1 &rarr; T2</th><th>Status</th><th>Changed</th><th>Human-made</th><th></th></tr>
+  {% for p in pairs %}
+  <tr>
+    <td><b>{{ p.name }}</b>{% if p.study_area %}<div class="notice" style="margin:0">{{ p.study_area }}</div>{% endif %}<div class="notice" style="margin:0">{{ p.created_at|ago }}</div></td>
+    <td>{{ p.source or '-' }}</td>
+    <td>{{ p.t1_date|date if p.t1_date else '-' }} &rarr; {{ p.t2_date|date if p.t2_date else '-' }}</td>
+    <td>{% if p.status == 'completed' %}<span class="pill ok">Completed</span>{% elif p.status == 'detected' %}<span class="pill info">Detected</span>{% else %}<span class="pill warn">Uploaded</span>{% endif %}</td>
+    <td>{% if p.result %}{{ p.result.area_changed_pct }}% &middot; {{ '%.2f'|format(p.result.total_change_area_km2) }} km&sup2;{% else %}-{% endif %}</td>
+    <td>{% if p.result %}{{ p.result.human_pct }}%{% else %}-{% endif %}</td>
+    <td style="white-space:nowrap;text-align:right">
+      <a class="btn sm" href="{{ url_for('analysis.classify', pair_id=p.id) if p.result else url_for('analysis.compare', pair_id=p.id) }}">{{ 'View' if p.result else 'Continue' }}</a>
+      <form method="post" action="{{ url_for('analysis.delete', pair_id=p.id) }}" style="display:inline" data-confirm="Delete this analysis and its files?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn sm danger" type="submit" title="Delete">{{ ic.i('trash') }}</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table></div></div>
+{% else %}
+<div class="card empty">{{ ic.i('history') }}<p>{{ 'No analyses match your search.' if q else 'No analyses yet.' }}</p><a class="btn primary" href="{{ url_for('analysis.new') }}">Start one</a></div>
+{% endif %}
+{% endblock %}

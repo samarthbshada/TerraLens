@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}New Analysis{% endblock %}
+{% block content %}
+<h1 class="page-title">New Analysis</h1>
+<p class="page-sub">Upload multi-temporal satellite images to detect and analyse changes</p>
+{% set step = 1 %}{% include 'includes/stepper.html' %}
+
+<form method="post" enctype="multipart/form-data" id="upload-form" data-loading="Uploading and checking your images...">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card">
+    <div class="card-title" style="margin-bottom:18px">{{ ic.i('upload') }}<span>Upload Satellite Images</span></div>
+    <div class="row">
+      <div class="field"><label for="source">Select Dataset</label>
+        <select id="source" name="source">{% for s in sources %}<option value="{{ s }}" {{ 'selected' if form.get('source') == s }}>{{ s }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="name">Analysis Name</label>
+        <input id="name" name="name" type="text" maxlength="160" required placeholder="e.g. Bhopal Urban Expansion" value="{{ form.get('name','') }}"></div>
+    </div>
+    <div class="row">
+      {% for tag, title, hint in (('t1','T1 - Earlier Image','Select or drag and drop the earlier satellite image (e.g., Jan 2024)'),('t2','T2 - Later Image','Select or drag and drop the later satellite image (e.g., Jan 2025)')) %}
+      <div class="upload-card">
+        <h3>{{ ic.i('calendar') }}{{ title }}</h3><p>{{ hint }}</p>
+        <label class="drop" for="{{ tag }}_file" data-drop="{{ tag }}">
+          <div class="thumb" id="{{ tag }}_thumb">{{ ic.i('image') }}</div>
+          <div>
+            <div class="fname" id="{{ tag }}_name"><span style="color:var(--muted);font-weight:400">Click to choose a file, or drop it here</span></div>
+            <div class="meta" id="{{ tag }}_meta">GeoTIFF, TIFF, PNG or JPG</div>
+            <span class="pill mute" id="{{ tag }}_status" style="display:none"></span>
+          </div>
+        </label>
+        <input type="file" id="{{ tag }}_file" name="{{ tag }}_file" accept=".tif,.tiff,.png,.jpg,.jpeg" required>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="row3" style="margin-top:20px">
+      <div class="field"><label for="study_area">Study area (optional)</label><input id="study_area" name="study_area" type="text" maxlength="160" placeholder="e.g. Bhopal, Madhya Pradesh" value="{{ form.get('study_area','') }}"></div>
+      <div class="field"><label for="t1_date">T1 acquisition date</label><input id="t1_date" name="t1_date" type="date" value="{{ form.get('t1_date','') }}"></div>
+      <div class="field"><label for="t2_date">T2 acquisition date</label><input id="t2_date" name="t2_date" type="date" value="{{ form.get('t2_date','') }}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="layout">Band order in the files</label>
+        <select id="layout" name="layout">{% for k, v in layout_labels.items() %}<option value="{{ k }}" {{ 'selected' if form.get('layout','rgb') == k }}>{{ v }}</option>{% endfor %}</select>
+        <div class="hint">Photos and screenshots are RGB. Multispectral GeoTIFFs: pick the order your bands are stored in.</div></div>
+      <div class="field"><label for="res">Ground resolution (metres per pixel)</label>
+        <input id="res" name="res" type="number" step="0.1" min="0.1" max="1000" value="{{ form.get('res','10') }}">
+        <div class="hint">Used for area (km&sup2;) when the file has no georeferencing. Sentinel-2: 10, LISS-IV: 5.8.</div></div>
+    </div>
+    <div class="actions">
+      <button class="btn" type="button" id="clear-btn">Clear</button>
+      <button class="btn primary" type="submit">Proceed to Comparison {{ ic.i('arrow-right') }}</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

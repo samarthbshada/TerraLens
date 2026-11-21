@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Compare{% endblock %}
+{% block content %}
+<h1 class="page-title">New Analysis</h1>
+<p class="page-sub">Upload multi-temporal satellite images to detect and analyse changes</p>
+{% include 'includes/stepper.html' %}
+
+<div class="card">
+  <div class="cmp-head">{{ ic.i('columns') }}<div><b style="font-size:22px">Temporal Image Comparison</b><small>Visually compare the satellite images from two time periods before running change detection.</small></div></div>
+  <div class="cmp-wrap mode-side" id="cmp">
+    <div class="cmp-grid">
+      {% for tag, d, name, iid in (('T1', pair.t1_date, pair.t1_name, pair.t1_image_id), ('T2', pair.t2_date, pair.t2_name, pair.t2_image_id)) %}
+      <div class="cmp-panel">
+        <div class="cmp-head" style="margin-bottom:10px">{{ ic.i('calendar') }}<div><b>{{ tag }}{% if d %} - {{ d|date }}{% endif %}</b><small>{{ pair.source }} ({{ pair.name }}) &middot; {{ name }}</small></div></div>
+        <div class="viewer"><div class="stage"><div class="zoomable" data-zoom><img src="{{ url_for('main.preview', image_id=iid) }}" alt="{{ tag }} image"></div></div></div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="cmp-single">
+      <div class="viewer"><div class="stage"><div class="zoomable" data-zoom>
+        <img src="{{ url_for('main.preview', image_id=pair.t1_image_id) }}" alt="T1">
+        <img class="top" id="cmp-top" src="{{ url_for('main.preview', image_id=pair.t2_image_id) }}" alt="T2" style="opacity:.5">
+      </div></div></div>
+      <input type="range" min="0" max="100" value="50" class="cmp-slider" id="cmp-slider" aria-label="Comparison slider">
+      <div class="notice">T1 is underneath, T2 on top. Drag the slider.</div>
+    </div>
+  </div>
+  <div class="vtools">
+    <button class="sqbtn" type="button" data-act="zoom-in" title="Zoom in">{{ ic.i('zoom-in') }}</button>
+    <button class="sqbtn" type="button" data-act="zoom-out" title="Zoom out">{{ ic.i('zoom-out') }}</button>
+    <button class="sqbtn" type="button" data-act="full" title="Full screen">{{ ic.i('maximize') }}</button>
+    <div class="seg" id="modes">
+      <button type="button" data-mode="swipe">{{ ic.i('columns') }}Swipe View</button>
+      <button type="button" data-mode="overlay">{{ ic.i('layers') }}Overlay View</button>
+      <button type="button" data-mode="side" class="on">{{ ic.i('columns') }}Side by Side</button>
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('analysis.new') }}">{{ ic.i('arrow-left') }}Back to Upload</a>
+    <form method="post" action="{{ url_for('analysis.detect', pair_id=pair.id) }}" data-loading="Registering images and detecting changes...">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn primary" type="submit">Proceed to Detect Changes {{ ic.i('arrow-right') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

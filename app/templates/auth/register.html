@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Create account{% endblock %}
+{% block auth %}
+<div class="auth-wrap"><div class="auth-card">
+  <div class="brand">{{ ic.logo() }}<span>Terra<b>Lens</b></span></div>
+  <div class="tagline">Detect and understand human-induced change.</div>
+  <div class="card">
+    {% include 'includes/flashes.html' %}
+    <h2 style="margin-bottom:18px">Create your account</h2>
+    <form method="post" autocomplete="on">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field"><label for="full_name">Full name</label><input id="full_name" name="full_name" type="text" value="{{ form.get('full_name','') }}"></div>
+      <div class="row">
+        <div class="field"><label for="username">Username</label><input id="username" name="username" type="text" required value="{{ form.get('username','') }}"></div>
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required value="{{ form.get('email','') }}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" minlength="8" required></div>
+        <div class="field"><label for="confirm">Confirm</label><input id="confirm" name="confirm" type="password" minlength="8" required></div>
+      </div>
+      <button class="btn primary" style="width:100%;justify-content:center" type="submit">Create account</button>
+    </form>
+    <p class="notice" style="text-align:center">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+  </div>
+</div></div>
+{% endblock %}

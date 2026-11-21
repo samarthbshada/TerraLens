@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Sign in{% endblock %}
+{% block auth %}
+<div class="auth-wrap"><div class="auth-card">
+  <div class="brand">{{ ic.logo() }}<span>Terra<b>Lens</b></span></div>
+  <div class="tagline">See the Change. Understand the Impact.</div>
+  <div class="card">
+    {% include 'includes/flashes.html' %}
+    <h2 style="margin-bottom:18px">Sign in</h2>
+    <form method="post" autocomplete="on">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field"><label for="login">Username or email</label><input id="login" name="login" type="text" required autofocus></div>
+      <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required></div>
+      <label class="check" style="margin-bottom:18px"><input type="checkbox" name="remember" value="1"> Keep me signed in</label>
+      <button class="btn primary" style="width:100%;justify-content:center" type="submit">Sign in</button>
+    </form>
+    <p class="notice" style="text-align:center">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+  </div>
+</div></div>
+{% endblock %}

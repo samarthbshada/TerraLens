@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1 class="page-title">Dashboard</h1>
+<p class="page-sub">Monitor and analyse surface changes from satellite imagery</p>
+
+<div class="grid g4">
+  <div class="card stat"><div class="bubble b-teal">{{ ic.i('bar') }}</div><div><div class="label">Total Analyses</div><div class="num">{{ stats.total_analyses }}</div></div></div>
+  <div class="card stat"><div class="bubble b-blue">{{ ic.i('layers') }}</div><div><div class="label">Images Processed</div><div class="num">{{ stats.images }}</div></div></div>
+  <div class="card stat"><div class="bubble b-purple">{{ ic.i('pin') }}</div><div><div class="label">Change Areas Detected</div><div class="num">{{ stats.regions }}</div></div></div>
+  <div class="card stat"><div class="bubble b-green">{{ ic.i('users') }}</div><div><div class="label">Human-made Changes</div><div class="num">{{ stats.human_regions }}</div></div></div>
+</div>
+
+<div class="grid g-main" style="margin-top:20px">
+  <div class="card">
+    <div class="card-title">{{ ic.i('image') }}<span>Recent Analysis</span><a class="view-all" href="{{ url_for('main.history') }}">View All &rarr;</a></div>
+    {% if latest %}
+    <div class="recent">
+      <a href="{{ url_for('analysis.classify', pair_id=latest.id) if result else url_for('analysis.compare', pair_id=latest.id) }}">
+        {% if result %}<img src="{{ url_for('main.output', pair_id=latest.id, name='classified.png') }}?v={{ result.created_at|replace(' ','')|replace(':','') }}" alt="Classified change map">
+        {% else %}<img src="{{ url_for('main.preview', image_id=latest.t2_image_id) }}" alt="T2 preview">{% endif %}
+      </a>
+      <div class="meta">
+        <h3 style="font-size:23px">{{ latest.name }}</h3>
+        <div>{{ ic.i('satellite') }}{{ latest.source or '-' }}</div>
+        <div>{{ ic.i('calendar') }}T1: {{ latest.t1_date|date if latest.t1_date else 'not set' }}</div>
+        <div>{{ ic.i('calendar') }}T2: {{ latest.t2_date|date if latest.t2_date else 'not set' }}</div>
+        <div>{% if latest.status == 'completed' %}<span class="pill ok">{{ ic.i('check') }}Completed</span>
+             {% elif latest.status == 'detected' %}<span class="pill info">Detected</span>
+             {% else %}<span class="pill warn">Uploaded</span>{% endif %}</div>
+        {% if result %}<div style="display:block;border-top:1px solid var(--border);padding-top:12px"><b>Change Summary:</b><br><b>~ {{ result.area_changed_pct }}% area changed</b></div>{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty">{{ ic.i('satellite') }}<p>No analyses yet. Upload a pair of satellite images to detect human-made and natural change.</p>
+      <a class="btn primary" href="{{ url_for('analysis.new') }}">Start a new analysis</a></div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-title">{{ ic.i('pie') }}<span>Change Distribution</span></div>
+    {% if stats.human_km2 + stats.other_km2 > 0 %}
+    <div style="display:flex;gap:26px;align-items:center;margin-top:20px;flex-wrap:wrap">
+      <div class="donut" style="background:conic-gradient(#19d6ca 0 {{ stats.human_pct }}%, #f59e0b {{ stats.human_pct }}% 100%)">
+        <div class="center"><b>{{ stats.human_pct }}%</b></div></div>
+      <div class="legend">
+        <div class="item"><span class="dot-sw" style="background:#19d6ca;margin-top:7px"></span><div><b>Human-made</b><small>({{ stats.human_pct }}%)</small></div></div>
+        <div class="item"><span class="dot-sw" style="background:#f59e0b;margin-top:7px"></span><div><b>Natural / Environmental</b><small>({{ stats.other_pct }}%)</small></div></div>
+      </div>
+    </div>
+    {% else %}<div class="empty" style="padding:30px 10px">{{ ic.i('pie') }}<p>The distribution appears after your first analysis.</p></div>{% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:20px">
+  <div class="card-title">{{ ic.i('clock') }}<span>Recent Activity</span><a class="view-all" href="{{ url_for('main.history') }}">View All &rarr;</a></div>
+  {% if activities %}
+  <ul class="activity">
+    {% for a in activities %}
+    <li><span class="dot" style="background:{{ {'analysis':'#22c55e','complete':'#22c55e','upload':'#3b82f6','delete':'#ef4444'}.get(a.kind,'#19d6ca') }}"></span>
+        <span>{{ a.message }}</span><span class="when">{{ a.created_at|ago }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="notice">Nothing yet - your activity will show up here.</p>{% endif %}
+</div>
+{% endblock %}

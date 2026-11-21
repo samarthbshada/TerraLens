@@ -1,0 +1,55 @@
+{% import 'includes/icons.html' as ic %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TerraLens{% endblock %} - TerraLens</title>
+  <meta name="theme-color" content="#08111f">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='20' fill='none' stroke='%2319d6ca' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+
+
+{% if current_user %}
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">{{ ic.logo() }}<span>Terra<b>Lens</b></span></div>
+    <nav class="nav">
+      {% set ep = request.endpoint or '' %}
+      <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if ep == 'main.dashboard' }}">{{ ic.i('grid') }}Dashboard</a>
+      <a href="{{ url_for('analysis.new') }}" class="{{ 'active' if ep.startswith('analysis.') }}">{{ ic.i('satellite') }}New Analysis</a>
+      <a href="{{ url_for('main.datasets') }}" class="{{ 'active' if ep == 'main.datasets' }}">{{ ic.i('database') }}Datasets</a>
+      <a href="{{ url_for('main.history') }}" class="{{ 'active' if ep == 'main.history' }}">{{ ic.i('history') }}Analysis History</a>
+      <a href="{{ url_for('main.settings') }}" class="{{ 'active' if ep == 'main.settings' }}">{{ ic.i('settings') }}Settings</a>
+    </nav>
+    <div class="side-foot"><div class="earth"></div><div class="tag">See the Change.<br>Understand the Impact.</div></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <span class="bell">{{ ic.i('bell') }}</span>
+      <details class="user">
+        <summary><div class="avatar">{{ (current_user.full_name or current_user.username)[:1]|upper }}</div></summary>
+        <div class="menu">
+          <div class="who"><b>{{ current_user.full_name or current_user.username }}</b><small>{{ current_user.email }}</small></div>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">{{ ic.i('logout') }}Sign out</button>
+          </form>
+        </div>
+      </details>
+    </div>
+    {% include 'includes/flashes.html' %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  {% block auth %}{% endblock %}
+{% endif %}
+<div class="loading" id="loading"><div><div class="spinner"></div><b id="loading-text">Working...</b><div class="notice">This can take a few seconds for large scenes.</div></div></div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Datasets{% endblock %}
+{% block content %}
+<h1 class="page-title">Datasets</h1>
+<p class="page-sub">Satellite imagery you have uploaded, grouped by source</p>
+{% if datasets %}
+<div class="grid g4" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+  {% for d in datasets %}
+  <div class="card stat"><div class="bubble b-blue">{{ ic.i('database') }}</div>
+    <div><div class="label">{{ d.name }}</div><div class="num" style="font-size:30px">{{ d.n_images }} <small style="font-size:15px;color:var(--muted)">images</small></div>
+    <div class="notice" style="margin:2px 0 0">{{ d.total_size|filesize }} &middot; since {{ d.created_at|date }}</div></div></div>
+  {% endfor %}
+</div>
+<div class="card" style="margin-top:20px">
+  <div class="card-title">{{ ic.i('image') }}<span>All images</span></div>
+  <div style="overflow-x:auto"><table class="t" style="margin-top:12px">
+    <tr><th></th><th>File</th><th>Role</th><th>Source</th><th>Date</th><th>Size</th><th>Bands</th><th>Analysis</th></tr>
+    {% for im in images %}
+    <tr>
+      <td style="width:76px"><img src="{{ url_for('main.preview', image_id=im.id) }}" alt="" style="width:64px;height:44px;object-fit:cover;border-radius:6px"></td>
+      <td>{{ im.original_filename }}<div class="notice" style="margin:0">{{ im.width }} &times; {{ im.height }} px</div></td>
+      <td><span class="pill info">{{ im.temporal_type }}</span></td>
+      <td>{{ im.satellite_source }}</td>
+      <td>{{ im.acquisition_date|date if im.acquisition_date else '-' }}</td>
+      <td>{{ im.file_size|filesize }}</td>
+      <td>{{ im.band_count }}</td>
+      <td>{% if im.pair_id %}<a href="{{ url_for('analysis.compare', pair_id=im.pair_id) }}">{{ im.pair_name }}</a>{% else %}-{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+</div>
+{% else %}
+<div class="card empty">{{ ic.i('database') }}<p>No datasets yet. They are created automatically when you upload imagery.</p><a class="btn primary" href="{{ url_for('analysis.new') }}">New analysis</a></div>
+{% endif %}
+{% endblock %}

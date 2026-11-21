@@ -1,0 +1,12 @@
+{# expects: step (1-4) #}
+{% set labels = ['Upload Images', 'Compare', 'Detect Changes', 'Classify & Analyse'] %}
+<div class="stepper">
+  {% for label in labels %}
+    {% set n = loop.index %}
+    <div class="step {{ 'done' if n < step else ('current' if n == step else '') }}">
+      <span class="dot">{% if n < step %}<svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>{% else %}{{ n }}{% endif %}</span>
+      <span>{{ label }}</span>
+    </div>
+    {% if not loop.last %}<div class="line {{ 'done' if n < step }}"></div>{% endif %}
+  {% endfor %}
+</div>

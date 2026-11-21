@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% import 'includes/icons.html' as ic %}
+{% block title %}Detect Changes{% endblock %}
+{% block content %}
+{% set v = result.created_at|replace(' ','')|replace(':','') %}
+<h1 class="page-title">New Analysis</h1>
+<p class="page-sub">Upload multi-temporal satellite images to detect and analyse changes</p>
+{% include 'includes/stepper.html' %}
+
+{% for w in result.warnings %}<div class="alert warn">{{ ic.i('alert') }}<div>{{ w }}</div></div>{% endfor %}
+<div class="card">
+  <div class="cmp-head">{{ ic.i('layers') }}<div><b style="font-size:22px">Change Detection Results</b><small>Regions of change identified between T1 and T2 using the {{ result.detector }}.</small></div></div>
+  <div class="cmp-grid" style="grid-template-columns:1.1fr 1fr">
+    <div class="cmp-panel">
+      <b style="font-size:18px;display:block;margin-bottom:10px">Detected Changes (Overlay)</b>
+      <div class="viewer"><div class="stage"><div class="zoomable" data-zoom id="det-stack">
+        <img class="layer" data-layer="t1" src="{{ url_for('main.output', pair_id=pair.id, name='t1.png') }}?v={{ v }}" style="display:none" alt="T1">
+        <img class="layer" data-layer="t2" src="{{ url_for('main.output', pair_id=pair.id, name='t2.png') }}?v={{ v }}" style="display:none" alt="T2">
+        <img class="layer" data-layer="overlay" src="{{ url_for('main.output', pair_id=pair.id, name='overlay.png') }}?v={{ v }}" alt="Detected changes overlay">
+      </div></div></div>
+      <div class="vtools">
+        <div class="checks" id="det-checks">
+          <label class="check"><input type="checkbox" data-show="overlay" checked> Change Overlay</label>
+          <label class="check"><input type="checkbox" data-show="t1"> T1 Image</label>
+          <label class="check"><input type="checkbox" data-show="t2"> T2 Image</label>
+        </div>
+        <span style="margin-left:auto;display:flex;gap:10px">
+          <button class="sqbtn" type="button" data-act="zoom-in">{{ ic.i('zoom-in') }}</button>
+          <button class="sqbtn" type="button" data-act="zoom-out">{{ ic.i('zoom-out') }}</button>
+          <button class="sqbtn" type="button" data-act="full">{{ ic.i('maximize') }}</button></span>
+      </div>
+    </div>
+    <div class="cmp-panel">
+      <b style="font-size:18px;display:block;margin-bottom:10px">Change Map (Binary)</b>
+      <div class="viewer"><div class="stage"><div class="zoomable" data-zoom><img src="{{ url_for('main.output', pair_id=pair.id, name='changemap.png') }}?v={{ v }}" alt="Binary change map"></div></div></div>
+      <div class="vtools" style="justify-content:flex-end">
+        <button class="sqbtn" type="button" data-act="zoom-in">{{ ic.i('zoom-in') }}</button>
+        <button class="sqbtn" type="button" data-act="zoom-out">{{ ic.i('zoom-out') }}</button>
+        <button class="sqbtn" type="button" data-act="full">{{ ic.i('maximize') }}</button>
+      </div>
+    </div>
+  </div>
+  <div class="stats4">
+    <div class="card inner stat small"><div class="bubble b-purple">{{ ic.i('pin') }}</div><div><div class="label">Total Change Area</div><div class="num">{{ '%.2f'|format(result.total_change_area_km2) }} km&sup2;</div></div></div>
+    <div class="card inner stat small"><div class="bubble b-green">{{ ic.i('layers') }}</div><div><div class="label">Changed Pixels</div><div class="num">{{ '{:,}'.format(result.changed_pixels) }}</div></div></div>
+    <div class="card inner stat small"><div class="bubble b-blue">{{ ic.i('percent') }}</div><div><div class="label">Area Changed</div><div class="num">{{ result.area_changed_pct }}%</div></div></div>
+    <div class="card inner stat small"><div class="bubble b-green">{{ ic.i('trend') }}</div><div><div class="label">Change Regions</div><div class="num" style="color:#4ade80">{{ result.n_regions }}</div></div></div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('analysis.compare', pair_id=pair.id) }}">{{ ic.i('arrow-left') }}Back to Compare</a>
+    <div class="right">
+      <form method="post" action="{{ url_for('analysis.detect', pair_id=pair.id) }}" data-loading="Re-running detection...">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">{{ ic.i('refresh') }}Re-run</button></form>
+      <a class="btn primary" href="{{ url_for('analysis.classify', pair_id=pair.id) }}">Proceed to Classify &amp; Analyse {{ ic.i('arrow-right') }}</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
